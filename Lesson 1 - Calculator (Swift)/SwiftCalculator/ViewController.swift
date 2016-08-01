@@ -32,49 +32,59 @@ class ViewController: UIViewController {
         touchHistory.text = touchHistoryArray.joinWithSeparator(", ")
     }
     
-    @IBAction func operationAction(sender: UIButton) {
-        updateHistory(sender.currentTitle!)
-        
-        if let mathematicalSymbol = sender.currentTitle {
-            brain.setOperand(displayValue)
-            brain.performOperarion(mathematicalSymbol)
-        }
-        displayValue = brain.result
-        if(startToType) {
-            startToType = false
-        }
-    }
-    
-    @IBOutlet weak var display: UILabel!
-    
-    @IBAction func touchDigital(sender: UIButton) {
-        updateHistory(sender.currentTitle!)
-        
+    private func isValidInput(input: String) -> Bool {
         if let currentDisplay = display.text {
-            switch sender.currentTitle! {
+            switch input {
             case ".":
                 if currentDisplay.rangeOfString(".") != nil {
-                    return
+                    return false;
                 }
             case "0":
-                if let range = currentDisplay.rangeOfString("0") {
-                    if currentDisplay.startIndex.distanceTo(range.startIndex) == 0 {
-                        return
+                if let rangeToZero = currentDisplay.rangeOfString("0") {
+                    if currentDisplay.startIndex.distanceTo(rangeToZero.startIndex) == 0 && currentDisplay.rangeOfString(".") == nil {
+                        return false;
                     }
                 }
             default:
                 break
             }
         }
-        
-        if(startToType) {
-            display.text = display.text! + sender.currentTitle!
+        return true;
+    }
+    
+    
+    @IBAction func operationAction(sender: UIButton) {
+        if let input = sender.currentTitle {
+            updateHistory(input)
+            
+            brain.setOperand(displayValue)
+            brain.performOperarion(input)
+            
+            displayValue = brain.result
+            if(startToType) {
+                startToType = false
+            }
         }
-        else {
-            display.text = sender.currentTitle!
-            startToType = true
+    }
+    
+    @IBOutlet weak var display: UILabel!
+    
+    @IBAction func touchDigital(sender: UIButton) {
+        if let input = sender.currentTitle {
+            updateHistory(input)
+            
+            if(isValidInput(input) == false) {
+                return;
+            }
+            
+            if(startToType) {
+                display.text = display.text! + input
+            }
+            else {
+                display.text = input
+                startToType = true
+            }
         }
-        
     }
 }
 
