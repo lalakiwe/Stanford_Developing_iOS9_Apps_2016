@@ -16,9 +16,6 @@
 @property (weak, nonatomic) IBOutlet UILabel *historyDisplay;
 @property (weak, nonatomic) IBOutlet UILabel *display;
 @property CalculatorBrain* brain;
-- (void) updateHistory: (NSString*) newString;
-- (bool) isValidInput: (NSString*) input;
-
 @end
 
 @implementation ViewController
@@ -27,14 +24,11 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     _startToType = false;
-    _touchHistoryArray = [[NSMutableArray alloc] init];
     _brain = [[CalculatorBrain alloc] init];
 }
 
 - (IBAction)touchDigit:(UIButton *)sender {
-    [self updateHistory:sender.currentTitle];
-    
-    if([self isValidInput:sender.currentTitle] == false) {
+    if([_brain isValidInput:sender.currentTitle currentDisplay:_display.text] == false) {
         return;
     }
     
@@ -45,44 +39,27 @@
     else {
         _display.text = [_display.text stringByAppendingString: sender.currentTitle];
     }
+    
+    [_brain updateHistory:sender.currentTitle];
+    _historyDisplay.text = _brain.history;
 }
 
 - (IBAction)performOperation:(UIButton *)sender {
-    [self updateHistory:sender.currentTitle];
+    if([_brain isValidInput:sender.currentTitle currentDisplay:_display.text] == false) {
+        return;
+    }
     
     [_brain setOperand:_display.text];
     [_brain performOperarion:sender.currentTitle];
+    [_brain updateHistory:sender.currentTitle];
   
     _display.text = @(_brain.result).stringValue;
     
     if(_startToType == true) {
         _startToType = false;
     }
-}
-
-- (void) updateHistory: (NSString*) newString {
-    [_touchHistoryArray addObject:newString];
-    if(_touchHistoryArray.count > 10) {
-        [_touchHistoryArray removeObjectAtIndex:0];
-    }
-    _historyDisplay.text = [_touchHistoryArray componentsJoinedByString:@", "];
-}
-
-- (bool) isValidInput: (NSString*) input {
-    NSString * currentDisplay = _display.text;
-    if(currentDisplay) {
-        if([input isEqualToString:@"."]) {
-            if([currentDisplay rangeOfString:@"."].location != NSNotFound) {
-                return false;
-            }
-        }
-        else if([input isEqualToString:@"0"]) {
-            if([currentDisplay rangeOfString:@"0"].location == 0 && [currentDisplay rangeOfString:@"."].location == NSNotFound) {
-                return false;
-            }
-        }
-    }
-    return true;
+    
+    _historyDisplay.text = _brain.history;
 }
 
 @end

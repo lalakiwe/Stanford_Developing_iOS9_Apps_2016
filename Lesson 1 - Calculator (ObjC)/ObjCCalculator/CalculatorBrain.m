@@ -33,6 +33,7 @@ enum OperationTypes{
 - (void) executeBinaryOperation;
 @property NSDictionary* operationTypes;
 @property NSDictionary* operations;
+@property NSMutableArray* touchHistoryArray;
 @end
 
 @implementation CalculatorBrain
@@ -43,22 +44,24 @@ enum OperationTypes{
     if (self)
     {
         _result = 0.0;
+        _history = nil;
         _pendingInfo = nil;
+        _touchHistoryArray = [[NSMutableArray alloc] init];
         
         _operationTypes = [NSDictionary dictionaryWithObjectsAndKeys:
                            [NSNumber numberWithInt:Constant], @"π",
                            [NSNumber numberWithInt:Constant], @"e",
                            [NSNumber numberWithInt:Constant], @"C",
-                           [NSNumber numberWithInt:BinaryOperation], @"√" ,
-                           [NSNumber numberWithInt:BinaryOperation], @"log" ,
-                           [NSNumber numberWithInt:BinaryOperation], @"cos" ,
-                           [NSNumber numberWithInt:BinaryOperation], @"sin" ,
-                           [NSNumber numberWithInt:BinaryOperation], @"tan" ,
-                           [NSNumber numberWithInt:BinaryOperation], @"±" ,
-                           [NSNumber numberWithInt:UnaryOperation], @"+",
-                           [NSNumber numberWithInt:UnaryOperation], @"-",
-                           [NSNumber numberWithInt:UnaryOperation], @"×",
-                           [NSNumber numberWithInt:UnaryOperation], @"÷",
+                           [NSNumber numberWithInt:UnaryOperation], @"√" ,
+                           [NSNumber numberWithInt:UnaryOperation], @"log" ,
+                           [NSNumber numberWithInt:UnaryOperation], @"cos" ,
+                           [NSNumber numberWithInt:UnaryOperation], @"sin" ,
+                           [NSNumber numberWithInt:UnaryOperation], @"tan" ,
+                           [NSNumber numberWithInt:UnaryOperation], @"±" ,
+                           [NSNumber numberWithInt:BinaryOperation], @"+",
+                           [NSNumber numberWithInt:BinaryOperation], @"-",
+                           [NSNumber numberWithInt:BinaryOperation], @"×",
+                           [NSNumber numberWithInt:BinaryOperation], @"÷",
                            [NSNumber numberWithInt:Equals], @"=",
                            nil];
         
@@ -103,18 +106,20 @@ enum OperationTypes{
                 double(^block)() = [_operations objectForKey:symbol];
                 if(block) {
                     _result = block();
-                }
-                break;
-            }
-            case BinaryOperation:
-            {
-                double(^block)(double) = [_operations objectForKey:symbol];
-                if(block) {
-                    _result = block(_result);
+                    _pendingInfo = nil;
                 }
                 break;
             }
             case UnaryOperation:
+            {
+                double(^block)(double) = [_operations objectForKey:symbol];
+                if(block) {
+                    _result = block(_result);
+                    _pendingInfo = nil;
+                }
+                break;
+            }
+            case BinaryOperation:
             {
                 [self executeBinaryOperation];
                 double(^block)(double, double) = [_operations objectForKey:symbol];
@@ -128,6 +133,67 @@ enum OperationTypes{
                 break;
         }
     }
+}
+
+
+- (void) updateHistory: (NSString*) newString {
+    if([[_touchHistoryArray firstObject] isEqualToString:@"C"]) {
+        [_touchHistoryArray removeAllObjects];
+    }
+    
+    NSNumber* operationType = [ _operationTypes objectForKey: newString];
+    if(operationType){
+        switch([operationType intValue]) {
+            case Constant:
+                [_touchHistoryArray removeAllObjects];
+                [_touchHistoryArray addObject:newString];
+                break;
+            case UnaryOperation:
+                [_touchHistoryArray insertObject:@"(" atIndex:0];
+                [_touchHistoryArray insertObject:newString atIndex:0];
+                [_touchHistoryArray addObject:@")"];
+                break;
+            case BinaryOperation:
+                [_touchHistoryArray addObject:newString];
+                break;
+            case Equals:
+                [_touchHistoryArray removeAllObjects];
+                [_touchHistoryArray addObject:@(_result).stringValue];
+                break;
+        }
+    }
+    else {
+        [_touchHistoryArray addObject:newString];
+        if(_touchHistoryArray.count > 10)
+            [_touchHistoryArray removeObjectAtIndex:0];
+    }
+    _history = [_touchHistoryArray componentsJoinedByString:@""];
+}
+
+
+- (bool) isValidInput: (NSString*) input currentDisplay:(NSString*)currentDisplay {
+    if(currentDisplay) {
+        if([input isEqualToString:@"."]) {
+            if([currentDisplay rangeOfString:@"."].location != NSNotFound) {
+                return false;
+            }
+        }
+        else if([input isEqualToString:@"0"]) {
+            if([currentDisplay rangeOfString:@"0"].location == 0 && [currentDisplay rangeOfString:@"."].location == NSNotFound) {
+                return false;
+            }
+        }
+        else {
+            NSNumber* operationType = [ _operationTypes objectForKey: input];
+            if(operationType && [operationType intValue] == BinaryOperation) {
+                NSNumber* lastOperationType = [_operationTypes objectForKey:[_touchHistoryArray lastObject]];
+                if(lastOperationType && [lastOperationType intValue] == BinaryOperation) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 @end

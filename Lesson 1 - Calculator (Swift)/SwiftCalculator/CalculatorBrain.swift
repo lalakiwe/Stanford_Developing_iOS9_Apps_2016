@@ -49,6 +49,8 @@ class CalculatorBrain {
     }
     
     private var accumulator = 0.0
+    private var touchHistoryArray = [String]()
+    
     func setOperand(operand: Double) {
         accumulator = operand
     }
@@ -57,8 +59,10 @@ class CalculatorBrain {
             switch operation {
             case .Constant(let value):
                 accumulator = value
+                pendingInfo = nil
             case .UnaryOperation(let function):
                 accumulator = function(accumulator)
+                pendingInfo = nil
             case .BinaryOperation(let function):
                 executePendingBinaryOperation()
                 pendingInfo = PendingBinaryOperationInfo(pendingOperation: function, firstOperand: accumulator)
@@ -67,9 +71,72 @@ class CalculatorBrain {
             }
         }
     }
+    func updateHistory(newString: String) {
+        if touchHistoryArray.first == "C"{
+            touchHistoryArray.removeAll()
+        }
+            
+        if let operation = operations[newString] {
+            switch operation {
+            case .Constant:
+                touchHistoryArray.removeAll()
+                touchHistoryArray.append(newString)
+            case .UnaryOperation:
+                touchHistoryArray.insert("(", atIndex: 0)
+                touchHistoryArray.insert(newString, atIndex: 0)
+                touchHistoryArray.append(")")
+            case .BinaryOperation:
+                touchHistoryArray.append(newString)
+            case .Equals:
+                touchHistoryArray.removeAll()
+                touchHistoryArray.append(String(accumulator))
+            }
+        }
+        else {
+            touchHistoryArray.append(newString)
+        }
+    }
+    func isValidInput(input: String, currentDisplay:String) -> Bool {
+        switch input {
+        case ".":
+            if currentDisplay.rangeOfString(".") != nil {
+                return false;
+            }
+        case "0":
+            if let rangeToZero = currentDisplay.rangeOfString("0") {
+                if currentDisplay.startIndex.distanceTo(rangeToZero.startIndex) == 0 && currentDisplay.rangeOfString(".") == nil {
+                    return false;
+                }
+            }
+        default:
+            if let operation = operations[input] {
+                switch operation {
+                case .BinaryOperation:
+                    if let lastTouch = operations[touchHistoryArray.last!] {
+                        switch lastTouch {
+                        case .BinaryOperation:
+                            return false
+                        default:
+                            break
+                        }
+                    }
+                    break
+                default:
+                    break
+                }
+            }
+            break
+        }
+        return true;
+    }
     var result : Double {
         get {
             return accumulator
+        }
+    }
+    var history : String {
+        get {
+            return touchHistoryArray.joinWithSeparator("")
         }
     }
 }

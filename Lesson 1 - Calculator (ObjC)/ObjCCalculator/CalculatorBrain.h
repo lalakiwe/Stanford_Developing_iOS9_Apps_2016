@@ -18,14 +18,15 @@ typedef double (^PendingOperation)(double, double);
 - (id)initWithArguments:(PendingOperation)pendingOperation firstOperand:(double)firstOperand;
 @end
 
-//void(^block)(void)
-
 @interface CalculatorBrain : NSObject
 
 - (void) setOperand: (NSString*) operand;
 - (void) performOperarion: (NSString*) symbol;
+- (void) updateHistory: (NSString*) newString;
+- (bool) isValidInput: (NSString*) input currentDisplay:(NSString*)currentDisplay;
 
 @property double result;
+@property NSString* history;
 @property PendingInfo* pendingInfo;
 
 @end
